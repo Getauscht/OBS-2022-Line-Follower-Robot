@@ -1,0 +1,442 @@
+#include <FalconRobot.h>
+/*Falcon Robot Library Variables*/
+FalconRobotLineSensor left(A2);
+FalconRobotLineSensor right(A3);
+
+// IR Sensors
+int leftSensorValue;  // variable to store the left sensor value
+int rightSensorValue; // variable to store the right sensor value
+
+#define LimitLumaDifference 700 // Basis for Comparing the Value Read by the IR Sensor
+#define DefaultSpeed 40 // Set to any number from 0 - 100.
+
+int flag; // variable to identify the edges of the black line
+
+FalconRobotMotors motors(5, 7, 6, 8);
+int leftMotorSpeed;  // variable used to store the leftMotor speed
+int rightMotorSpeed; // variable used to store the rightMotor speed
+
+// Default Variables Values
+int leftDEFAULTSpeed = DefaultSpeed + 5;
+int rightDEFAULTSpeed = DefaultSpeed;
+
+// PID Variables
+float error = 0;
+int P = 0;
+int I = 0;
+int D = 0;
+int PIDValue = 0;
+int PreviousError = 0;
+float Kp = 25;
+float Kd = 0;
+float Ki = 40;
+
+void setup()
+{
+  Serial.begin(9600); // Setup the Serial to a speed of 9600bps
+  delay(1000);
+}
+
+void SensorValueController() {
+
+  leftSensorValue = left.read();
+  rightSensorValue = right.read();
+
+  // 0 = Preto / 1 = Branco
+  // First Number = Left Sensor
+  // Second Number = Right Sensor
+  // Possiveis combinações de leitura
+  // 00 - Preto Preto -> 2
+  // 01 - Preto Branco -> 1
+  // 10 - Branco Preto -> -1
+  // 11 - Branco Branco -> -2
+
+  if((leftSensorValue > LimitLumaDifference) && (rightSensorValue > LimitLumaDifference)) {
+    error = 2;
+  }
+  if((leftSensorValue > LimitLumaDifference) && (rightSensorValue < LimitLumaDifference)) {
+    error = 1;
+  }
+  if((leftSensorValue < LimitLumaDifference) && (rightSensorValue > LimitLumaDifference)) {
+    error = -1;
+  }
+  if((leftSensorValue < LimitLumaDifference) && (rightSensorValue < LimitLumaDifference)) {
+    error = -2;
+  }
+}
+
+void PIDController() {
+
+  P = error;
+  I = I + error;
+  D = error - PreviousError;
+  PIDValue = (Kp * P) + (Ki * I) + (Kd * D);
+  PreviousError = error;
+}
+
+void MotorPIDController() {
+  leftMotorSpeed = 40 - leftDEFAULTSpeed - PIDValue;
+  rightMotorSpeed = 40 + rightDEFAULTSpeed - PIDValue;
+
+  constrain(leftMotorSpeed, 0, 50);
+  constrain(rightMotorSpeed, 0, 50);
+
+  motors.leftDrive(leftMotorSpeed, FORWARD);
+  motors.rightDrive(rightMotorSpeed, FORWARD);
+}
+
+void MotorController() {
+  if(error == -2) {
+    motors.leftDrive(leftDEFAULTSpeed, FORWARD);
+    motors.rightDrive(rightDEFAULTSpeed, FORWARD);
+  } else if(error == -1) {
+    motors.leftDrive(leftDEFAULTSpeed, FORWARD);
+    motors.rightDrive((rightDEFAULTSpeed/2), BACKWARD);
+  } else if(error == 1) {
+    motors.leftDrive((leftDEFAULTSpeed / 2), BACKWARD);
+    motors.rightDrive(rightDEFAULTSpeed, FORWARD);
+  } else if(error == 2) {
+    motors.leftDrive(leftDEFAULTSpeed - leftDEFAULTSpeed, BACKWARD);
+    motors.rightDrive(rightDEFAULTSpeed - rightDEFAULTSpeed, BACKWARD);
+  }
+}
+
+void loop() {
+  SensorValueController();
+  PIDController();
+  MotorPIDController();
+
+  Serial.print("Left Sensor Value: ");
+  Serial.println(leftSensorValue);
+  Serial.print("Right Sensor Value: ");
+  Serial.println(rightSensorValue);
+  Serial.print("Error: ");
+  Serial.println(error);
+  Serial.print("PID Value: ");
+  Serial.println(PIDValue);
+  Serial.print("Left Motor Speed: ");
+  Serial.println(leftMotorSpeed);
+  Serial.print("Right Motor Speed: ");
+  Serial.println(rightMotorSpeed);
+  Serial.println("");
+  delay(100);
+  // 
+}
+
+
+
+
+
+
+
+
+
+#include <Arduino.h>
+
+#define motorPinDir1 6
+#define motorPinDir2 8
+#define motorPinEsq1 5
+#define motorPinEsq2 7
+
+#define motorLetInitialSpeed 132
+#define motorDirInitialSpeed 127
+
+#define leftSensorPin A2
+#define rightSensorPin A3
+
+int leftSensorValue = 0;
+int rightSensorValue = 0;
+
+#define LIMITLUMA 700
+
+int error;
+
+void setup()
+{
+  pinMode(motorPinDir1, OUTPUT);
+  pinMode(motorPinDir2, OUTPUT);
+  pinMode(motorPinEsq1, OUTPUT);
+  pinMode(motorPinEsq2, OUTPUT);
+
+  pinMode(leftSensorPin, INPUT);
+  pinMode(rightSensorPin, INPUT);
+
+  Serial.begin(9600);
+}
+
+// void SensorValueController()
+// {
+
+//   leftSensorValue = left.read();
+//   rightSensorValue = right.read();
+
+//   // 0 = Preto / 1 = Branco
+//   // First Number = Left Sensor
+//   // Second Number = Right Sensor
+//   // Possiveis combinações de leitura
+//   // 00 - Preto Preto -> 2
+//   // 01 - Preto Branco -> 1
+//   // 10 - Branco Preto -> -1
+//   // 11 - Branco Branco -> -2
+
+//   if ((leftSensorValue > LIMITLUMA) && (rightSensorValue > LIMITLUMA))
+//   {
+//     error = 2;
+//   }
+//   if ((leftSensorValue > LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+//   {
+//     error = 1;
+//   }
+//   if ((leftSensorValue < LIMITLUMA) && (rightSensorValue > LIMITLUMA))
+//   {
+//     error = -1;
+//   }
+//   if ((leftSensorValue < LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+//   {
+//     error = -2;
+//   }
+// }
+
+void LineFollow() {
+  analogWrite(motorPinDir1, motorDirInitialSpeed);
+  digitalWrite(motorPinDir2, HIGH);
+  delay(1000);
+  analogWrite(motorPinEsq1, motorLetInitialSpeed);
+  digitalWrite(motorPinEsq2, HIGH);
+}
+
+void loop()
+{
+  leftSensorValue = analogRead(leftSensorPin);
+  rightSensorValue = analogRead(rightSensorPin);
+  Serial.println('leftSensorValue');
+  Serial.println(leftSensorValue);
+  Serial.println('rightSensorValue');
+  Serial.println(rightSensorValue);
+
+  delay(1000);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <Arduino.h>
+#include <Servo.h>
+
+#define motorPinDir1 6
+#define motorPinDir2 8
+#define motorPinEsq1 5
+#define motorPinEsq2 7
+
+#define motorLetInitialSpeed 220
+#define motorDirInitialSpeed 160
+
+#define leftSensorPin A7
+#define rightSensorPin A3
+#define centralSensorPin A0
+
+#define motorServo 8
+
+int leftSensorValue = 0;
+int rightSensorValue = 0;
+
+int centralSensorValue = 0;
+
+#define LIMITLUMA 700
+
+int error;
+
+int P = 0;
+int I = 0;
+int D = 0;
+int PIDValue = 0;
+float Kp = 25;
+float Kd = 0;
+float Ki = 0;
+int PreviousError = 0;
+
+Servo servo1;
+
+void setup()
+{
+  pinMode(motorPinDir1, OUTPUT);
+  pinMode(motorPinDir2, OUTPUT);
+  pinMode(motorPinEsq1, OUTPUT);
+  pinMode(motorPinEsq2, OUTPUT);
+
+  pinMode(leftSensorPin, INPUT);
+  pinMode(rightSensorPin, INPUT);
+  pinMode(centralSensorPin, INPUT);
+
+  // servo1.attach(motorServo);
+
+  Serial.begin(9600);
+}
+
+void SensorValueController()
+{
+
+  leftSensorValue = analogRead(leftSensorPin);
+  rightSensorValue = analogRead(rightSensorPin);
+  centralSensorValue = analogRead(centralSensorPin);
+
+  // 0 = Preto / 1 = Branco
+  // First Number = Left Sensor
+  // Second Number = Right Sensor
+  // Possiveis combinações de leitura
+  // ESQUERDA || CENTRO || DIREITA
+  // 0 0 0 = - 3 -> Parar
+  // 0 0 1 = -2  -> Virar para a esquerda
+  // 0 1 1 = -1 -> Virar para a esquerda
+  // 1 0 1 = 0 -> Continuar para frente
+  // 1 1 0 = 1 -> Virar para a direita
+  // 1 0 0 = 2 -> Virar para a direita
+  // 1 1 1 = 3 -> Se perdeu, retroceder até corrigir o erro
+
+  // If readValue > LIMITLUMA, then the sensor ir reading black
+  // If readValue < LIMITLUMA, then the sensor ir reading white
+
+  if ((leftSensorPin > LIMITLUMA) && (centralSensorValue > LIMITLUMA) && (rightSensorValue > LIMITLUMA))
+  {
+    error = -3;
+  }
+  if ((leftSensorPin > LIMITLUMA) && (centralSensorValue > LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+  {
+    error = -2;
+  }
+  if ((leftSensorPin > LIMITLUMA) && (centralSensorValue < LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+  {
+    error = -1;
+  }
+  if ((leftSensorPin < LIMITLUMA) && (centralSensorValue > LIMITLUMA) && (rightSensorValue > LIMITLUMA))
+  {
+    error = 0;
+  }
+  if ((leftSensorPin < LIMITLUMA) && (centralSensorValue < LIMITLUMA) && (rightSensorValue > LIMITLUMA))
+  {
+    error = 1;
+  }
+  if ((leftSensorPin < LIMITLUMA) && (centralSensorValue > LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+  {
+    error = 2;
+  }
+  if ((leftSensorPin < LIMITLUMA) && (centralSensorValue < LIMITLUMA) && (rightSensorValue < LIMITLUMA))
+  {
+    error = 3;
+  }
+}
+
+// void PIDController()
+// {
+
+//   P = error;
+//   I = I + error;
+//   D = error - error;
+
+//   PIDValue = ((Kp * P) + (Ki * I) + (Kd * D));
+
+//   PreviousError = error;
+// }
+
+// void PIDMotorController()
+// {
+
+//   int motorDirSpeed = 127 - motorLetInitialSpeed - PIDValue;
+//   int motorEsqSpeed = 132 + motorDirInitialSpeed - PIDValue;
+
+//   analogWrite(motorPinDir1, motorDirSpeed);
+//   if (motorDirSpeed <= 0)
+//   {
+//     digitalWrite(motorPinDir2, LOW);
+//   }
+//   else
+//   {
+//     digitalWrite(motorPinDir2, HIGH);
+//   }
+//   analogWrite(motorPinDir2, motorDirSpeed);
+//   if (motorEsqSpeed <= 0)
+//   {
+//     digitalWrite(motorPinEsq1, LOW);
+//   }
+//   else
+//   {
+//     digitalWrite(motorPinEsq1, HIGH);
+//   }
+// }
+
+// void LineFollow()
+// {
+//   analogWrite(motorPinDir1, motorDirInitialSpeed);
+//   digitalWrite(motorPinDir2, HIGH);
+//   delay(1000);
+//   analogWrite(motorPinEsq1, motorLetInitialSpeed);
+//   digitalWrite(motorPinEsq2, HIGH);
+// }
+
+void loop()
+{
+  
+  SensorValueController();
+
+  if(error == 0) { // Frente
+    analogWrite(motorPinDir1, motorDirInitialSpeed);
+    digitalWrite(motorPinDir2, HIGH);
+    analogWrite(motorPinEsq1, motorLetInitialSpeed);
+    digitalWrite(motorPinEsq2, HIGH);
+  }
+
+  if(error == -1) { // Esquerda
+    analogWrite(motorPinDir1, motorDirInitialSpeed);
+    digitalWrite(motorPinDir2, HIGH);
+    analogWrite(motorPinEsq1, 0);
+    digitalWrite(motorPinEsq2, LOW);
+  }
+  if(error == -2) { // Esquerda
+    analogWrite(motorPinDir1, motorDirInitialSpeed);
+    digitalWrite(motorPinDir2, HIGH);
+    analogWrite(motorPinEsq1, (0));
+    digitalWrite(motorPinEsq2, LOW);
+  }
+  if(error == -3) { // Parar
+    analogWrite(motorPinDir1, 0);
+    digitalWrite(motorPinDir2, HIGH);
+    analogWrite(motorPinEsq1, 0);
+    digitalWrite(motorPinEsq2, HIGH);
+  }
+  if(error == 1) { // Direita
+    analogWrite(motorPinDir1, 0);
+    digitalWrite(motorPinDir2, LOW);
+    analogWrite(motorPinEsq1, motorLetInitialSpeed);
+    digitalWrite(motorPinEsq2, HIGH);
+  }
+  if(error == 2) { // Direita
+    analogWrite(motorPinDir1, 0);
+    digitalWrite(motorPinDir2, LOW);
+    analogWrite(motorPinEsq1, motorLetInitialSpeed);
+    digitalWrite(motorPinEsq2, HIGH);
+  }
+  if(error == 3) { // Retroceder
+    analogWrite(motorPinDir1, 0);
+    digitalWrite(motorPinDir2, HIGH);
+    analogWrite(motorPinEsq1, 0);
+    digitalWrite(motorPinEsq2, HIGH);
+  }
+
+  // Serial.print("Left Sensor: ");
+  // Serial.println(leftSensorValue);
+  // Serial.print("Right Sensor: ");
+  // Serial.println(rightSensorValue);
+  // Serial.print("Central Sensor: ");
+  // Serial.println(centralSensorValue);
+}
